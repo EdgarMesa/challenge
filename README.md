@@ -2,9 +2,9 @@
 
 ## Diferencias entre 'completion' y 'chat' models
 
-Durante el pre-entrenamiento de un LLM (Large Language Model), el objetivo principal es predecir la siguiente palabra. Desde esta fase, los modelos pueden considerarse como **completion models**.
+Desde mi entendimiento durante el pre-entrenamiento de un LLM (Large Language Model), el objetivo principal es predecir la siguiente palabra. Desde esta fase, los modelos pueden considerarse como **completion models**.
 
-A partir de esta base, es importante destacar dos aspectos fundamentales que diferencian su capacidad como chatbots:
+A partir del punto anterior, es importante destacar dos aspectos fundamentales que diferencian su capacidad como chatbots:
 
 1. **Fase de Fine-Tuning**: En esta fase, una de las múltiples tareas entrenadas es actuar como asistente o mantener una conversación coherente en cuanto al tono y al vocabulario.
    
@@ -14,12 +14,12 @@ A partir de esta base, es importante destacar dos aspectos fundamentales que dif
 
 En lo que yo entiendo, no se puede forzar directamente una respuesta específica (como 'sí' o 'no') en un LLM "out-of-the-box" debido a su naturaleza probabilística. Sin embargo, es posible asegurar que la respuesta del LLM siga un formato predefinido después de generarla. Esto se puede lograr mediante la función **structured_output** (una versión mejorada del **JSON mode**) proporcionada por diferentes proveedores.
 
-Se puede suministrar un esquema a seguir utilizando **clases de Pydantic** y añadir validadores para incrementar la seguridad del formato de salida.
+Se puede suministrar un esquema a seguir utilizando **clases de Pydantic** y añadir validators para incrementar la seguridad del formato de salida.
 
 ## Ventajas e inconvenientes de RAG vs Fine-Tuning
 
 - **Fine-Tuning**:
-  - **Ventaja**: Suele ser más preciso cuando se trata de realizar una nueva tarea especializada. Es ideal para casos donde se desee generar una funcionalidad nueva o de nicho que no haya sido abordada durante el entrenamiento original.
+  - **Ventaja**: Suele ser más preciso cuando se trata de realizar una nueva tarea especializada. Es ideal para casos donde se desee generar una funcionalidad nueva o de nicho que no haya sido abordada durante el entrenamiento de fine tunning.
   - **Desventaja**: Uno de los principales inconvenientes es el alto coste en términos de recursos y tiempo.
 
 - **RAG (Retrieval-Augmented Generation)**:
