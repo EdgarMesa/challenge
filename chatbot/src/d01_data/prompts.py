@@ -5,6 +5,8 @@ Mantén un tono formal y explicativo, ya que tratarás temas jurídicos complejo
 
 Resumen de la conversación con el usuario:
 {}
+Datos del usuario:
+{}
 """
 
 
@@ -15,3 +17,21 @@ Resúmenes anteriores:
 {}
 Conversación a resumir:
 """
+
+
+EXTRACT_LONG_MEMORY_SYSTEM_PROMPT = """A continuación, se te proporciona el último mensaje del usuario y la información actual que tenemos en la base de datos para ese usuario.
+
+Tu tarea es extraer la siguiente información del usuario:
+- **Nombre**
+- **Profesión** (o trabajo)
+- **Gmail**
+
+La propiedad "actualizar" debe responder "si" si la información extraída (nombre, profesión o gmail) es diferente de la información existente en la base de datos; en caso contrario, responde "no".
+Si alguno de los campos no se menciona en el mensaje déjalo vacío, pero asegúrate de completar el campo "actualizar" correctamente según los cambios.
+Información existente en la base de datos:
+-----
+{}
+-----
+
+Último mensaje del usuario:
+-----"""

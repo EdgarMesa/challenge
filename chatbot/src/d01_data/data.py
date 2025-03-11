@@ -99,7 +99,120 @@ def upsert_vectors_in_batches(vectors, index, batch_size=100):
     for i in tqdm(range(0, len(vectors), batch_size)):
         batch = vectors[i:i + batch_size]
         index.upsert(vectors=batch)
-        
-        
+
+def create_usuarios_table(conn):
+    """
+    Create the 'usuarios' table in the provided SQLite database connection if it doesn't already exist.
+
+    The table 'usuarios' will have the following columns:
+      - id_usuario: an TEXT PRIMARY KEY that uniquely identifies each user.
+      - nombre: a TEXT field for the user's name.
+      - profesion: a TEXT field for the user's profession.
+      - gmail: a TEXT field for the user's Gmail address.
+
+    Parameters:
+    conn (sqlite3.Connection): An open SQLite database connection.
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id_usuario TEXT PRIMARY KEY,
+            nombre TEXT,
+            profesion TEXT,
+            gmail TEXT
+        )
+    """)
+    conn.commit()
 
 
+def list_tables(conn):
+    """
+    List all tables in the provided SQLite database connection.
+    
+    Parameters:
+    conn (sqlite3.Connection): An open SQLite database connection.
+    
+    Returns:
+    list: A list of table names in the database.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+    return [table[0] for table in tables]
+
+
+def get_user_info(conn, user_id):
+    """
+    Retrieve a user's information from the 'usuarios' table based on the provided user ID.
+    
+    Parameters:
+    conn (sqlite3.Connection): An open SQLite database connection.
+    user_id (int): The id of the user to retrieve.
+    
+    Returns:
+    dict or None: A dictionary with keys 'id_usuario', 'nombre', 'profesion', and 'gmail' if the user exists,
+                  otherwise None.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT id_usuario, nombre, profesion, gmail FROM usuarios WHERE id_usuario = ?", (user_id,))
+    row = cursor.fetchone()
+    
+    if row:
+        return {
+            'nombre': row[1],
+            'profesion': row[2],
+            'gmail': row[3]
+        }
+    return None
+
+
+def upsert_user(conn, user_id, user_data):
+    """
+    Insert a new user or update an existing user's information in the 'usuarios' table.
+
+    Parameters:
+    conn (sqlite3.Connection): An open SQLite database connection.
+    user_id (int): The id of the user to update or insert.
+    user_data (dict): A dictionary with keys among 'nombre', 'profesion', and 'gmail'. The values
+                      are the corresponding field values for the user.
+    """
+    cursor = conn.cursor()
+    
+    # Check if the user exists.
+    cursor.execute("SELECT id_usuario FROM usuarios WHERE id_usuario = ?", (user_id,))
+    exists = cursor.fetchone() is not None
+    
+    if exists:
+        # If there are fields to update, build and execute the UPDATE statement.
+        if user_data:
+            update_clause = ", ".join([f"{key} = ?" for key in user_data.keys()])
+            values = list(user_data.values())
+            values.append(user_id)
+            sql = f"UPDATE usuarios SET {update_clause} WHERE id_usuario = ?"
+            cursor.execute(sql, values)
+    else:
+        # Insert new record. Merge the user_id with the provided user_data.
+        columns = ["id_usuario"] + list(user_data.keys())
+        placeholders = ", ".join(["?"] * len(columns))
+        values = [user_id] + list(user_data.values())
+        sql = f"INSERT INTO usuarios ({', '.join(columns)}) VALUES ({placeholders})"
+        cursor.execute(sql, values)
+    
+    conn.commit()
+
+
+def delete_user(conn, user_id):
+    """
+    Delete a user from the 'usuarios' table based on the provided user ID.
+
+    Parameters:
+    conn (sqlite3.Connection): An open SQLite database connection.
+    user_id (int): The id of the user to delete.
+
+    Returns:
+    bool: True if a record was deleted, False otherwise.
+    """
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM usuarios WHERE id_usuario = ?", (user_id,))
+    conn.commit()
+    return cursor.rowcount > 0

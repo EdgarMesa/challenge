@@ -49,7 +49,7 @@ def predict(message, history, user_id, debug_mode):
     """
 
     debug = True if debug_mode == 'Activado' else False
-    config = {'configurable': {'thread_id': user_id}}
+    config = {'configurable': {'thread_id': user_id, 'user_id':user_id}}
     input_message = HumanMessage(content=message)
     
     outputs = graph.invoke({'messages': [input_message]}, config, stream_mode='updates')

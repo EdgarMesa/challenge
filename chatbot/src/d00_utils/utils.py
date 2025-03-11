@@ -243,3 +243,27 @@ def parse_graph_output(outputs, debug=False):
                 output_messages.append(('tool', f'Tool Message:\n{mess.content}'))
                 
     return output_messages
+
+
+def update_dict_preserve(dict_from, dict_to):
+    """
+    Update the keys of dict_to using values from dict_from. For any key present in both,
+    if dict_to has a None value and dict_from has a non-None value, the value from dict_from
+    will be used. Otherwise, dict_to's existing non-None value is preserved.
+    
+    Parameters:
+    dict_from (dict): The dictionary providing new values.
+    dict_to (dict): The dictionary to be updated.
+    
+    Returns:
+    dict: The updated dict_to.
+    """
+    for key, value in dict_from.items():
+        if key in dict_to:
+            # Only update if the value in dict_to is None and the new value is not None.
+            if dict_to[key] is None and value is not None:
+                dict_to[key] = value
+        else:
+            # If key is not present in dict_to, add it.
+            dict_to[key] = value
+    return dict_to
