@@ -55,16 +55,13 @@ def predict(message, history, user_id, debug_mode):
     input_message = HumanMessage(content=message)
     
     if not IS_INTERRUPT:
-        print('NO IS_INTERRUPT MESSAGE')
         outputs = graph.invoke({'messages': [input_message]}, config, stream_mode='updates')
     else:
-        print('SI INTERRUPT MESSAGE')
         outputs = graph.invoke(Command(resume=message), config, stream_mode='updates')
         IS_INTERRUPT = False
     node_name = list(outputs[-1].keys())[0]
 
     if node_name == '__interrupt__':
-        print('interrupt detected')
         IS_INTERRUPT = True
     
     output_messages = parse_graph_output(outputs,
