@@ -217,30 +217,36 @@ def parse_graph_output(outputs, debug=False):
     for out in outputs:
         node_name = list(out.keys())[0]
         
-        # Extract the messages associated with this node.
-        node_messages = out[node_name]['messages']
         
-        # Ensure that node_messages is a list; if not, wrap it in a list for uniform processing.
-        if not isinstance(node_messages, list):
-            node_messages = [node_messages]
-            
-        for mess in node_messages:
-            # Check if the message is an instance of AIMessage.
-            if isinstance(mess, AIMessage):
-                # Determine if the AIMessage has additional keyword arguments (e.g., for function calls).
-                is_function_call = mess.additional_kwargs
-                if is_function_call:
-                    # Extract the function call details from the additional keyword arguments.
-                    function_call = mess.additional_kwargs['function_call']
-                    if debug:
-                        output_messages.append(('fn', str(parse_tool_call(function_call))))
-                else:
-                    # Otherwise, treat it as a regular AI message.
-                    output_messages.append(('ai', mess.content))
+        if node_name == '__interrupt__':
+            for int in out[node_name]:
+                output_messages.append(('ai', int.value['question']))
+        else:
+            if out[node_name]:
+                # Extract the messages associated with this node.
+                node_messages = out[node_name]['messages']
+                
+                # Ensure that node_messages is a list; if not, wrap it in a list for uniform processing.
+                if not isinstance(node_messages, list):
+                    node_messages = [node_messages]
                     
-            elif isinstance(mess, ToolMessage) and debug:
-                # Append the tool message with a 'tool' tag and a prefixed label.
-                output_messages.append(('tool', f'Tool Message:\n{mess.content}'))
+                for mess in node_messages:
+                    # Check if the message is an instance of AIMessage.
+                    if isinstance(mess, AIMessage):
+                        # Determine if the AIMessage has additional keyword arguments (e.g., for function calls).
+                        is_function_call = mess.additional_kwargs
+                        if is_function_call:
+                            # Extract the function call details from the additional keyword arguments.
+                            function_call = mess.additional_kwargs['function_call']
+                            if debug:
+                                output_messages.append(('fn', str(parse_tool_call(function_call))))
+                        else:
+                            # Otherwise, treat it as a regular AI message.
+                            output_messages.append(('ai', mess.content))
+                            
+                    elif isinstance(mess, ToolMessage) and debug:
+                        # Append the tool message with a 'tool' tag and a prefixed label.
+                        output_messages.append(('tool', f'Tool Message:\n{mess.content}'))
                 
     return output_messages
 

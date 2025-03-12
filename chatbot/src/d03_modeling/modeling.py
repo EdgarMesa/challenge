@@ -7,18 +7,33 @@ from pinecone import Pinecone
 from pathlib import Path
 
 from pinecone_text.sparse import BM25Encoder
+from googleapiclient.discovery import build
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import base64
 
-from src.d01_data.data import create_index_if_not_exists
+from src.d01_data.data import create_index_if_not_exists, get_credentials
+
 
 root_dir = Path(os.getcwd()).parent.parent
 
 output_path = root_dir / 'data' / '04_model_output'
+
+
+
+SCOPES = [
+    'https://www.googleapis.com/auth/gmail.send',
+]
+
+creds = get_credentials(root_dir=root_dir, SCOPES=SCOPES)
+service = build('gmail', 'v1', credentials=creds)
 
 pc = Pinecone()
 pc_index = create_index_if_not_exists(client=pc, index_name='chatbot-leyes')
 
 fitted_bm25 = BM25Encoder(language='spanish')
 fitted_bm25.load(output_path / 'bm25_values.json')
+
 
 def process_query(query):
     """
@@ -203,3 +218,76 @@ def consult_legal_database(query: str, alpha: float, filter: dict) -> list[str]:
         rerank_result = 'No hay información relevante a la query del usuario en la base de datos'
 
     return rerank_result
+
+
+def _send_email(to: str, subject: str, message_text: str) -> str:
+
+    """
+    Sends an email using the provided service.
+    
+    Args:
+        to (str): The recipient's email address.
+        subject (str): The subject of the email.
+        message_text (str): The plain text content of the email body.
+
+    Returns:
+        str. Returns a string saying that the email has been sent
+    """
+    #Quiero que me mandes todas esa informacion sobre langraph al correo edgarmp@metiora.com con el asunto informacion de langGraph
+    #user_id (str, optional): The sender's user ID. Defaults to 'me'.
+    # Create a multipart MIME message to hold email components
+    message = MIMEMultipart()
+    
+    # Set the recipient email address
+    message['to'] = to
+    
+    # Set the email subject
+    message['subject'] = subject
+    
+    # Attach the plain text message to the email
+    message.attach(MIMEText(message_text, 'plain'))
+    
+    # Encode the message as base64 for transmission
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    
+    # Create the body of the message with the raw encoded content
+    message_body = {'raw': raw}
+    
+    # Use the Gmail API to send the email via the authenticated user
+    sent_message = (
+        service.users().messages().send(userId='me', body=message_body).execute()
+    )
+    
+    return sent_message
+
+@tool
+def send_email_f(to: str, subject: str, message_text: str) -> str:
+    """
+    Sends an email with the given subject and message text to the specified email address.
+
+    This function is intended to be used when a user requests to send information via email.
+    It requires that the user provides all necessary details:
+      - A valid recipient email address (if not already available in the database, the email must be explicitly provided).
+      - A subject for the email.
+      - The message content to be sent.
+
+    If any of these parameters (email address, subject, or message text) are missing, notify the user,
+    to supply the missing information before attempting to send the email.
+
+    Parameters:
+        to (str): The recipient's email address.
+        subject (str): The subject of the email.
+        message_text (str): The body text of the email message.
+
+    Returns:
+        str: A confirmation message with the metadata of the email sent'
+
+    Example:
+            send_email(to="user@example.com", subject="Meeting Reminder", message_text="Don't forget our meeting at 10 AM.")
+    """
+    
+    try:
+        _send_email(to=to, subject=subject, message_text=message_text)
+        return f'El correo con asunto "{subject}" se ha enviado correctamente a "{to}"'
+    except Exception as e:
+        return f'No se ha podido enviar el correo a {to}'

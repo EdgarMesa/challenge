@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import gradio as gr
 from gradio.themes import Ocean  
 from langchain.schema import AIMessage, HumanMessage
+from langgraph.types import Command
 
 root_dir = Path(os.getcwd()).parent.parent
 sys.path.insert(0, str(root_dir))
@@ -19,6 +20,7 @@ from src.d01_data.graph import graph
 
 # Name of the file to store users
 USER_FILE = str(root_dir / 'data' / '03_memories' / 'usuarios.txt')
+IS_INTERRUPT = False
     
 def load_users():
     """
@@ -47,12 +49,27 @@ def predict(message, history, user_id, debug_mode):
     a simulated response that uses the user ID.
     If debug_mode is "Activado", modify the response accordingly.
     """
-
+    global IS_INTERRUPT
     debug = True if debug_mode == 'Activado' else False
     config = {'configurable': {'thread_id': user_id, 'user_id':user_id}}
     input_message = HumanMessage(content=message)
     
-    outputs = graph.invoke({'messages': [input_message]}, config, stream_mode='updates')
+    if not IS_INTERRUPT:
+        print('NO IS_INTERRUPT MESSAGE')
+        outputs = graph.invoke({'messages': [input_message]}, config, stream_mode='updates')
+    else:
+        print('SI INTERRUPT MESSAGE')
+        outputs = graph.invoke(Command(resume=message), config, stream_mode='updates')
+        IS_INTERRUPT = False
+    node_name = list(outputs[-1].keys())[0]
+    print(outputs)
+    print(node_name)
+    print()
+    print()
+    if node_name == '__interrupt__':
+        print('interrupt detected')
+        IS_INTERRUPT = True
+    
     output_messages = parse_graph_output(outputs,
                                          debug=debug)
     if debug:

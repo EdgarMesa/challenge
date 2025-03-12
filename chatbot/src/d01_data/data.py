@@ -1,7 +1,11 @@
+import os
 import json
 from pinecone import ServerlessSpec
 import time
 from tqdm import tqdm
+
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.credentials import Credentials
 
 def read_json(filename):
     """
@@ -99,6 +103,53 @@ def upsert_vectors_in_batches(vectors, index, batch_size=100):
     for i in tqdm(range(0, len(vectors), batch_size)):
         batch = vectors[i:i + batch_size]
         index.upsert(vectors=batch)
+        
+        
+def get_credentials(root_dir, SCOPES):
+    """
+    Retrieve or generate Google API credentials.
+
+    Args:
+        root_dir (Path): The root directory containing credentials and token files.
+        SCOPES (list): The list of OAuth scopes required for the API access.
+
+    Returns:
+        Credentials: Authorized Google API credentials.
+    """
+    creds = None
+    token_path = root_dir / 'token.json'
+
+    # Check if a token file exists
+    if os.path.exists(token_path):
+        with open(token_path, 'r') as token:
+            try:
+                # Load token data and create credentials
+                creds_info = json.load(token)
+                creds = Credentials.from_authorized_user_info(creds_info, SCOPES)
+            except json.JSONDecodeError:
+                # Handle invalid token JSON
+                creds = None
+
+    # Verify credentials and ensure the required scopes are included
+    if creds and creds.valid and creds.has_scopes(SCOPES):
+        return creds
+    else:
+        # Remove invalid token file if it exists
+        if os.path.exists(token_path):
+            os.remove(token_path)
+
+        # Initiate OAuth flow to generate new credentials
+        flow = InstalledAppFlow.from_client_secrets_file(
+            root_dir / 'credentials.json', SCOPES
+        )
+        creds = flow.run_local_server(port=0)
+
+        # Save the new credentials to the token file
+        with open(token_path, 'w') as token:
+            token.write(creds.to_json())
+
+        return creds
+    
 
 def create_usuarios_table(conn):
     """

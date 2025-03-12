@@ -7,6 +7,7 @@ from pprint import pprint
 
 from tqdm import tqdm
 from pydantic import BaseModel, Field
+from typing import Literal
 
 import google.generativeai as genai
 
@@ -18,6 +19,7 @@ from langchain_core.messages import (
     RemoveMessage,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.types import Command, interrupt
 
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import (
@@ -26,7 +28,7 @@ from langgraph.graph import (
     END,
     MessagesState
 )
-from langgraph.prebuilt import ToolNode
+
 from langchain_core.runnables.config import RunnableConfig  
 
 root_dir = Path(os.getcwd()).parent.parent
@@ -34,7 +36,7 @@ memories_path = root_dir / 'data' / '03_memories'
 
 from src.d01_data.pydantic_classes import Resumen, PerfilUsuario
 from src.d01_data.prompts import CONVERSATION_SYSTEM_PROMPT, SUMMARIZE_SYSTEM_PROMPT, EXTRACT_LONG_MEMORY_SYSTEM_PROMPT
-from src.d03_modeling.modeling import consult_legal_database
+from src.d03_modeling.modeling import consult_legal_database, send_email_f
 from src.d01_data.data import create_usuarios_table, get_user_info, upsert_user
 from src.d00_utils.utils import update_dict_preserve
 
@@ -46,14 +48,13 @@ long_term_db_path = memories_path / 'long_term_memory.db'
 long_term_db_conn = sqlite3.connect(str(long_term_db_path), check_same_thread=False)
 create_usuarios_table(long_term_db_conn)
  
-tools = [consult_legal_database]
-# tool_node = ToolNode(tools)
+tools = [consult_legal_database, send_email_f]
 
 conversation_llm = ChatGoogleGenerativeAI(
     model=os.getenv('GEMINI_MODEL'),
     temperature=0.6,
     top_p=0.6,
-    max_tokens=500,
+    max_tokens=1_000,
     timeout=None,
     max_retries=2
 ).bind_tools(tools)
@@ -96,16 +97,14 @@ def conversation(state: InnerState, config: RunnableConfig) -> InnerState:
     
     user_id = config['configurable']['user_id']
     user_info = get_user_info(long_term_db_conn, user_id)
-    if not user_info:
-        user_info = {}
+    user_info = user_info if user_info else {}
     
-    summary = state.get('resumen', '')
-    if summary:
-        system_message = summary
-        messages = [SystemMessage(content=CONVERSATION_SYSTEM_PROMPT.format(system_message, user_info))] + state['messages']
-    else:
-        messages = state['messages']
+    summary = state.get('resumen', 'No hay resumen de momento')
+    user_info_str = 'No hay información del usuario' if not user_info else str(user_info)
+    messages = [SystemMessage(content=CONVERSATION_SYSTEM_PROMPT.format(summary, user_info_str))] + state['messages']
+    
     response = conversation_llm.invoke(messages)
+    
     return {'messages': response, 'perfil_usuario': user_info}
 
 
@@ -141,6 +140,65 @@ def consult_database(state: InnerState) -> OutputState:
     
     return {'messages': outputs}
 
+
+def send_email(state: InnerState) -> OutputState:
+    """
+    Sends an email to the user with the information that he wants.
+    """
+    messages = state['messages']
+    
+    last_message = messages[-1]
+    
+    outputs = []
+    
+    for tool_call in last_message.tool_calls:
+        tool_call_name = tool_call['name']
+        
+        if tool_call_name != 'send_email_f':
+            raise Exception(f'Tool call name "{tool_call_name}" does not match "send_email_f"')
+        
+        tool_result = tools_by_name[tool_call_name].invoke(tool_call['args'])
+        
+        outputs.append(
+            ToolMessage(
+                content=tool_result,
+                name=tool_call_name,
+                tool_call_id=tool_call['id'],
+            )
+        )
+    
+    return {'messages': outputs}
+
+
+def human_review_email(state: InnerState) -> Command[Literal['conversation', 'send_email']]:
+    last_message = state['messages'][-1]
+    tool_call = last_message.tool_calls[-1]
+    
+    toll_call_args = tool_call['args']
+
+    human_review = interrupt(
+        {
+            'question': f"""¿Es la información para enviar el email correcta?. Poner "si" para seguir o corrige lo necesario:
+Destinatario: {toll_call_args['to']}
+Asunto: {toll_call_args['subject']}"""
+        }
+    )
+
+    # if approved, call the tool
+    if human_review.lower() in ['si', 'sí']:
+        return Command(goto='send_email')
+
+    # provide feedback to LLM in case not acepting
+    else:
+        
+        feedback = f"""ERROR AL ENVIAR EL CORREO. El usuario pidio los siguientes cambios:'\n{human_review}'\nmodifica los parametros de la función de email Y LLÁMALA DE NUEVO."""
+        extra_human_message =  HumanMessage(
+                content=feedback,
+                name='User feedback',
+                id=last_message.id)
+        return Command(goto='conversation', update={'messages': [extra_human_message]})
+
+
 def summarize_conversation(state: InnerState) -> InnerState:
     """
     Summarizes the conversation based on the given state.
@@ -148,8 +206,8 @@ def summarize_conversation(state: InnerState) -> InnerState:
     prev_summary = state.get('resumen', 'No resumen previo')
     messages = [SystemMessage(content=SUMMARIZE_SYSTEM_PROMPT.format(prev_summary))] + state['messages']
     response = sumarization_llm.invoke(messages)
-    # Remove older messages to manage token usage, keeping the most recent 6 messages
-    delete_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-6]]
+    # Remove older messages to manage token usage, keeping the most recent 12 messages
+    delete_messages = [RemoveMessage(id=m.id) for m in state['messages'][:-12]]
     return {'resumen': response.resumen, 'messages': delete_messages}
 
 
@@ -171,7 +229,7 @@ def update_long_term_memory(state: InnerState, config: RunnableConfig) -> Output
     if last_user_message:
         user_id = config['configurable']['user_id']
         user_info = state['perfil_usuario']
-        user_info_str = '' if not user_info else str(user_info)
+        user_info_str = 'no hay información del usuario' if not user_info else str(user_info)
         messages = [SystemMessage(content=EXTRACT_LONG_MEMORY_SYSTEM_PROMPT.format(user_info_str))] + [last_user_message]
         
         response = extract_user_info_llm.invoke(messages)
@@ -204,9 +262,11 @@ def should_continue(state: InnerState):
         tool_call_name = last_message.tool_calls[0]['name']
         if tool_call_name == 'consult_legal_database':
             return 'consult_database'
+        elif tool_call_name == 'send_email_f':
+            return 'human_review_email'
         
     tokens = token_counter.count_tokens('\n'.join([m.content for m in messages])).total_tokens
-    if tokens > 5_000:
+    if tokens > 10_000:
         return 'summarize_conversation'
     return 'update_memory'
 
@@ -218,16 +278,20 @@ workflow = StateGraph(InnerState, input=OutputState, output=OutputState)
 workflow.add_node('conversation', conversation)
 workflow.add_node('summarize_conversation', summarize_conversation)
 workflow.add_node('consult_database', consult_database)
+workflow.add_node('human_review_email', human_review_email)
+workflow.add_node('send_email', send_email)
 workflow.add_node('update_memory', update_long_term_memory)
 
 workflow.add_edge(START, 'conversation')
 workflow.add_conditional_edges('conversation', should_continue, {
         'update_memory': 'update_memory',
         'consult_database': 'consult_database',
+        'human_review_email':'human_review_email',
         'summarize_conversation': 'summarize_conversation',
     })
 workflow.add_edge('consult_database', 'conversation')
-workflow.add_edge('summarize_conversation', END)
+workflow.add_edge('send_email', 'conversation')
+workflow.add_edge('summarize_conversation', 'update_memory')
 workflow.add_edge('update_memory', END)
 
 graph = workflow.compile(checkpointer=short_term_memory)
