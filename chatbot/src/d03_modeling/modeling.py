@@ -168,7 +168,6 @@ def consult_legal_database(query: str, alpha: float, filter: dict) -> list[str]:
       - alpha = 1: Use only semantic search.
     Intermediate values blend both approaches. This allows the model to adjust search behavior based on 
     the complexity or specificity of the user's query.
-    Usually we want small apha values if the user makes references to a very specific article.
 
     Additionally, the function applies a metadata filter on the 'origen' field using the $in operator.
     This filter restricts the search to a specific legal document source, such as:
