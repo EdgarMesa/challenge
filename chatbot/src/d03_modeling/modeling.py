@@ -74,7 +74,7 @@ def hybrid_query(query, top_k, alpha, filter={}):
     
     dense_vec = pc.inference.embed(
                     model=os.getenv('EMBEDDING_MODEL'),
-                    inputs=['Articulo 1 de la constitucion española'],
+                    inputs=[query],
                     parameters={'dimension':1_024,'input_type': 'query', 'truncate': 'END'}
                 )
 
