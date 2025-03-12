@@ -62,10 +62,7 @@ def predict(message, history, user_id, debug_mode):
         outputs = graph.invoke(Command(resume=message), config, stream_mode='updates')
         IS_INTERRUPT = False
     node_name = list(outputs[-1].keys())[0]
-    print(outputs)
-    print(node_name)
-    print()
-    print()
+
     if node_name == '__interrupt__':
         print('interrupt detected')
         IS_INTERRUPT = True
