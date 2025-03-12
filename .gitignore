@@ -1,3 +1,5 @@
 chatbot/.env
 post_request.ipynb
 prueba_cv.ipynb
+chatbot/credentials.json
+chatbot/token.json
