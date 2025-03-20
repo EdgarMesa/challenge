@@ -3,14 +3,14 @@
 ## Resumen de la herramienta.
 Agente en forma de chatbot con interfaz gráfica, capaz de asistir con preguntas sobre las leyes españolas, como las que se encuentran en la Constitución Española, el Código Civil y el Código Penal. Este chatbot cuenta tanto con memoria dinámica a corto plazo como con memoria a largo plazo sobre características generales del usuario. Por último, también tiene la funcionalidad de enviar la información deseada por correo electrónico.
 
-![Diagrama agente](data/chatbot_images/diagrama.png)
+![Diagrama agente](chatbot/data/chatbot_images/diagrama.png)
 
 ## Parseo de Documentos.
 Al tratarse de documentos altamente organizados y con jerarquias (estructura BOE) se ha hecho un parseo ad-hoc para respetar estas jerarquias por cada bloque de información que se extraiga. Cada chunck de información representa un articulo en su totalidad ya que es la unidad de texto más lógica tanto a nivel de contenido como en tamaño (no todos los articulos estan relacionados por proximidad). Aunque gracias a mantener las jerarquias se podrian hacer todo tipo de sistemas mas complejos durante el retrieval
 
-![Ejemplo índice Constitución Española](data/chatbot_images/indice.png)
-![Ejemplo artículos](data/chatbot_images/ejemplo_boe.png)
-![Guardado metadata en Pinecone](data/chatbot_images/chunk_en_pinecone.png)
+![Ejemplo índice Constitución Española](chatbot/data/chatbot_images/indice.png)
+![Ejemplo artículos](chatbot/data/chatbot_images/ejemplo_boe.png)
+![Guardado metadata en Pinecone](chatbot/data/chatbot_images/chunk_en_pinecone.png)
 
 ## Memoria.
 ### Short-term memory.
@@ -28,10 +28,10 @@ Esta herramienta, al ejecutar una acción 'importante', tiene la particularidad 
 ## Interfaz
 Se ha creado una sencilla interfaz gráfica en Gradio para que se pueda interactuar con el chatbot. Es posible añadir y seleccionar usuarios para aprovechar las capacidades de memoria del agente, y además cuenta con un botón de 'depuración' para mostrar todos los mensajes adicionales de 'tool-calling' que no se muestran al usuario.
 
-![Interfaz Gradio](data/chatbot_images/interfaz_chatbot.png)
-![Guardado de datos de usuario en memoria](data/chatbot_images/interfaz_guardado_long_term.png)
-![Ejemplo tool calling consulta en bbdd](data/chatbot_images/interfaz_tool_calling_1.png)
-![Ejemplo tool calling envio de correo](data/chatbot_images/interfaz_tool_calling_2.png)
-![Ejemplo interrupcion](data/chatbot_images/interrupcion.png)
-![Envio de correo](data/chatbot_images/envio_correo.png)
-![Correo en bandeja de entrada](data/chatbot_images/correo.png)
+![Interfaz Gradio](chatbot/data/chatbot_images/interfaz_chatbot.png)
+![Guardado de datos de usuario en memoria](chatbot/data/chatbot_images/interfaz_guardado_long_term.png)
+![Ejemplo tool calling consulta en bbdd](chatbot/data/chatbot_images/interfaz_tool_calling_1.png)
+![Ejemplo tool calling envio de correo](chatbot/data/chatbot_images/interfaz_tool_calling_2.png)
+![Ejemplo interrupcion](chatbot/data/chatbot_images/interrupcion.png)
+![Envio de correo](chatbot/data/chatbot_images/envio_correo.png)
+![Correo en bandeja de entrada](chatbot/data/chatbot_images/correo.png)
