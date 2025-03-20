@@ -1,0 +1,16 @@
+[project]
+name = "Object_Detection"
+version = "0.1.0"
+description = "API Detección de personas y coches"
+requires-python = ">=3.11, <3.12"
+dependencies = [
+    "fastapi==0.115.11",
+    "uvicorn==0.34.0",
+    "pillow==11.1.0",
+    "python-multipart==0.0.20",
+    "supervision==0.25.1",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,15 +1,37 @@
-FROM ultralytics/ultralytics:latest-cpu
+## ------------------------------- Builder Stage ------------------------------ ##
+FROM python:3.11-slim AS builder
 
-# working directory
+RUN apt-get update && apt-get install --no-install-recommends -y build-essential && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN pip install uv
+
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+COPY pyproject.toml ./
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv sync --no-cache-dir
 
-# Copy the rest of the code
-COPY . .
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Ensures we install only the cpu version
+RUN uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+RUN uv pip install ultralytics
+
+# ------------------------------- Production Stage ------------------------------ ##
+FROM python:3.11-slim AS production
+
+RUN apt-get update && apt-get install --no-install-recommends -y libgl1-mesa-glx libglib2.0-0\
+        build-essential && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Moves the enviroment from the builder to production
+COPY --from=builder /app/.venv .venv
+COPY yolo11s.pt yolo11s.pt
+COPY detect.py detect.py
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
