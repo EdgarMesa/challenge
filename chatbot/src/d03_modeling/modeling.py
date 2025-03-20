@@ -20,7 +20,6 @@ root_dir = Path(os.getcwd()).parent.parent
 output_path = root_dir / 'data' / '04_model_output'
 
 
-
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.send',
 ]

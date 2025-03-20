@@ -32,9 +32,10 @@ Se puede suministrar un esquema a seguir utilizando **clases de Pydantic** y añ
 
 Existen varias métricas que se pueden utilizar para evaluar un bot de preguntas y respuestas (Q&A), tales como:
 
-- **Accuracy**
+
+- **Relevancy**
 - **Correctness**
-- **Hallucination**
+- **Faithfulness/Hallucination**
 - **Prompt Alignment**
 - Métricas tradicionales de comparación de textos como **BLEU**, **ROUGE** o **BERTScore**.
 

@@ -7,3 +7,5 @@ usuario1945
 usuario9686
 usuario_Edgar
 usuario8056
+edgar
+edgar_1

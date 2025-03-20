@@ -18,7 +18,7 @@ def read_json(filename):
     dict o list: Contenido del archivo JSON como un diccionario o lista.
     """
     try:
-        with open(filename, 'r') as archivo:
+        with open(filename, 'r', encoding="utf8") as archivo:
             contenido = json.load(archivo)
         return contenido
     except FileNotFoundError:
@@ -39,8 +39,8 @@ def json_dump(datos, nombre_archivo):
     """
     try:
         # Guarda el archivo con la extensión .json
-        with open(f"{nombre_archivo}.json", "w") as archivo:
-            json.dump(datos, archivo, indent=4)
+        with open(f"{nombre_archivo}.json", "w", encoding="utf8") as archivo:
+            json.dump(datos, archivo, indent=4, ensure_ascii=False)
         print(f"Archivo guardado exitosamente como {nombre_archivo}.json")
     except Exception as e:
         print(f"Error al guardar el archivo: {e}")
